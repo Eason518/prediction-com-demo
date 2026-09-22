@@ -28,7 +28,7 @@ function EventTree({ events }: { events: PredictionEvent[] }) {
                 <span className="search-group-title">{g.title}</span>
                 <span style={{ fontSize: 10, color: 'var(--dim)' }}>{g.platform_count} platforms</span>
                 <div className="pb-list">
-                  {g.platforms.map(p => <PlatformBadge key={p} p={p} />)}
+                  {(g.platforms ?? []).map(p => <PlatformBadge key={p} p={p} />)}
                 </div>
                 {g.markets?.length ? (
                   <span style={{ color: 'var(--dim)', fontSize: 11 }}>{open[g.group_id] ? '▲' : '▼'}</span>

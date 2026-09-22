@@ -138,6 +138,52 @@ async def search(
     return await proxy_get("/search", {"q": q, "limit": limit})
 
 
+# ── Kalshi markets catalog ─────────────────────────────────────────────────────
+@app.get("/api/kalshi/markets")
+async def get_kalshi_markets(
+    status: str | None = None,
+    category: str | None = None,
+    event_ticker: str | None = None,
+    series_ticker: str | None = None,
+    tickers: str | None = None,
+    limit: int = Query(100, ge=1, le=1000),
+    cursor: str | None = None,
+):
+    return await proxy_get("/kalshi/markets", {
+        "status": status,
+        "category": category,
+        "event_ticker": event_ticker,
+        "series_ticker": series_ticker,
+        "tickers": tickers,
+        "limit": limit,
+        "cursor": cursor,
+    })
+
+
+# ── Kalshi single market ───────────────────────────────────────────────────────
+@app.get("/api/kalshi/markets/{ticker:path}")
+async def get_kalshi_market(ticker: str):
+    return await proxy_get(f"/kalshi/markets/{ticker}")
+
+
+# ── Trades ─────────────────────────────────────────────────────────────────────
+@app.get("/api/trades")
+async def get_trades(
+    platform: str | None = None,
+    market_id: str | None = None,
+    limit: int = Query(50, ge=1, le=500),
+    order: str = "desc",
+    pagination_key: str | None = None,
+):
+    return await proxy_get("/trades", {
+        "platform": platform,
+        "market_id": market_id,
+        "limit": limit,
+        "order": order,
+        "pagination_key": pagination_key,
+    })
+
+
 # ── Prices bulk ────────────────────────────────────────────────────────────────
 @app.get("/api/prices/bulk")
 async def get_prices_bulk(ids: str = Query(..., description="Comma-separated platform:market_id pairs")):

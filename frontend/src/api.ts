@@ -16,15 +16,18 @@ async function apiFetch<T>(path: string, params?: Record<string, string | number
 }
 
 export const api = {
-  status: () => apiFetch<StatusResponse>('/api/status'),
-  rateLimit: () => apiFetch<RateLimitResponse>('/api/rate-limit'),
-  markets: (p: MarketsParams) => apiFetch<MarketsResponse>('/api/markets', p as any),
-  events: (p: EventsParams) => apiFetch<EventsResponse>('/api/events', p as any),
-  search: (q: string, limit = 10) => apiFetch<SearchResponse>('/api/search', { q, limit }),
-  pricesBulk: (ids: string) => apiFetch<PricesBulkResponse>('/api/prices/bulk', { ids }),
+  status:        () => apiFetch<StatusResponse>('/api/status'),
+  rateLimit:     () => apiFetch<RateLimitResponse>('/api/rate-limit'),
+  markets:       (p: MarketsParams) => apiFetch<MarketsResponse>('/api/markets', p as any),
+  events:        (p: EventsParams) => apiFetch<EventsResponse>('/api/events', p as any),
+  search:        (q: string, limit = 10) => apiFetch<SearchResponse>('/api/search', { q, limit }),
+  pricesBulk:    (ids: string) => apiFetch<PricesBulkResponse>('/api/prices/bulk', { ids }),
+  kalshiMarkets: (p: KalshiMarketsParams) => apiFetch<KalshiMarketsResponse>('/api/kalshi/markets', p as any),
+  kalshiMarket:  (ticker: string) => apiFetch<KalshiMarket>(`/api/kalshi/markets/${encodeURIComponent(ticker)}`),
+  trades:        (p: TradesParams) => apiFetch<TradesResponse>('/api/trades', p as any),
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ───────────────────────────────────────────────────────────────────────
 
 export interface PlatformStatus {
   active_markets: number
@@ -128,4 +131,76 @@ export interface BulkPrice {
 export interface PricesBulkResponse {
   _meta: { requested: number; resolved: number; unresolved_ids: string[] }
   prices: Record<string, BulkPrice>
+}
+
+// ── Kalshi ──────────────────────────────────────────────────────────────────────
+
+export interface KalshiMarketsParams {
+  status?: string
+  category?: string
+  event_ticker?: string
+  series_ticker?: string
+  tickers?: string
+  limit?: number
+  cursor?: string
+}
+
+export interface KalshiMarket {
+  ticker: string
+  event_ticker: string
+  title: string
+  status: string
+  yes_bid_dollars: string
+  yes_ask_dollars: string
+  no_bid_dollars?: string
+  no_ask_dollars?: string
+  last_price_dollars: string
+  volume_fp?: string
+  open_interest_fp?: string
+  liquidity_dollars?: string
+  close_time: string
+  open_time?: string
+  category?: string
+  rules_primary?: string
+  rules_secondary?: string
+  result: string
+  tags?: string[]
+}
+
+export interface KalshiMarketsResponse {
+  markets: KalshiMarket[]
+  cursor?: string | null
+  _meta: { count: number; source: string; category?: string; pages_scanned?: number }
+}
+
+// ── Trades ──────────────────────────────────────────────────────────────────────
+
+export interface TradesParams {
+  platform?: string
+  market_id?: string
+  limit?: number
+  order?: string
+  pagination_key?: string
+}
+
+export interface Trade {
+  trade_id: string
+  platform: string
+  market_id: string
+  token_id?: string
+  side: string | null
+  taker_side: string | null
+  price: number
+  shares: number
+  amount_usd: number
+  maker_addr: string | null
+  taker_addr: string | null
+  executed_at: string
+  timestamp: number
+}
+
+export interface TradesResponse {
+  trades: Trade[]
+  pagination: { limit: number; count: number; has_more: boolean; pagination_key: string | null }
+  _meta: { data_available_from: string; start_time: number; end_time: number; default_window_applied?: boolean }
 }

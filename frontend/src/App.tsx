@@ -8,6 +8,9 @@ import MarketsPage    from './pages/MarketsPage'
 import SearchPage     from './pages/SearchPage'
 import EventsPage     from './pages/EventsPage'
 import PricesBulkPage from './pages/PricesBulkPage'
+import KalshiMarketsPage from './pages/KalshiMarketsPage'
+import KalshiMarketPage  from './pages/KalshiMarketPage'
+import TradesPage        from './pages/TradesPage'
 import LockedPage     from './pages/LockedPage'
 
 // ── Sidebar nav definition ────────────────────────────────────────────────────
@@ -24,7 +27,14 @@ const NAV = [
   { to: '/search',     method: 'GET', label: '/search' },
 
   { group: 'Prices' },
-  { to: '/prices-bulk', method: 'GET', label: '/prices/bulk' },
+  { to: '/prices-bulk',   method: 'GET', label: '/prices/bulk' },
+
+  { group: 'Kalshi' },
+  { to: '/kalshi/markets',        method: 'GET', label: '/kalshi/markets' },
+  { to: '/kalshi/markets/ticker', method: 'GET', label: '/kalshi/markets/{ticker}' },
+
+  { group: 'Trades' },
+  { to: '/trades', method: 'GET', label: '/trades' },
 
   { group: 'WebSocket', lock: 'Dev+' },
   { to: '/ws/prices',      method: 'WS', label: 'prices', lock: 'Dev+' },
@@ -108,6 +118,9 @@ function AppRoutes() {
       <Route path="/events"      element={<EventsPage />} />
       <Route path="/search"      element={<SearchPage />} />
       <Route path="/prices-bulk" element={<PricesBulkPage />} />
+      <Route path="/kalshi/markets"        element={<KalshiMarketsPage />} />
+      <Route path="/kalshi/markets/ticker" element={<KalshiMarketPage />} />
+      <Route path="/trades"                element={<TradesPage />} />
 
       {/* WebSocket — locked */}
       <Route path="/ws/prices"      element={<LockedPage method="WS" path="/prices"      desc="即時 bid/ask/last 更新，每次市場價格變動推送。"                 tier="Dev $49/mo" what="WebSocket prices channel — 即時報價串流" />} />
