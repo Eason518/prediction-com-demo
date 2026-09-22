@@ -1,14 +1,23 @@
-export default function LockedPage({
-  icon, title, sub, tier,
-}: { icon: string; title: string; sub: string; tier: string }) {
+import ExplorerLayout from '../components/ExplorerLayout'
+
+interface Props {
+  method?: 'GET' | 'WS'
+  path: string
+  desc: string
+  tier: string
+  what: string
+}
+
+export default function LockedPage({ method = 'GET', path, desc, tier, what }: Props) {
   return (
-    <div className="locked-page">
-      <div className="locked-icon">{icon}</div>
-      <div className="locked-title">{title}</div>
-      <div className="locked-sub">{sub}</div>
-      <a href="https://prediction.com/api/docs/pricing" target="_blank" rel="noreferrer" className="upgrade-btn">
-        升級至 {tier} →
-      </a>
-    </div>
+    <ExplorerLayout
+      method={method} path={path} desc={desc}
+      locked={{ tier, what }}
+      onRun={() => {}}
+      requestSlot={null}
+      visualSlot={null}
+      responseData={null}
+      responseState="idle"
+    />
   )
 }

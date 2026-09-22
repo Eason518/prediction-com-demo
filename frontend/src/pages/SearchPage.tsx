@@ -1,115 +1,127 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import ExplorerLayout, { type RequestState } from '../components/ExplorerLayout'
+import { PlatformBadge, PriceYes } from '../components/ui'
 import { api } from '../api'
-import type { PredictionEvent } from '../api'
-import { Spinner, ErrorBox, PlatformBadge, PriceCell } from '../components'
+import type { SearchResponse, PredictionEvent } from '../api'
 
-function EventCard({ event }: { event: PredictionEvent }) {
-  const [open, setOpen] = useState(false)
+function EventTree({ events }: { events: PredictionEvent[] }) {
+  const [open, setOpen] = useState<Record<number, boolean>>({})
+  const toggle = (id: number) => setOpen(o => ({ ...o, [id]: !o[id] }))
+
   return (
-    <div className="card" style={{ marginBottom: 8 }}>
-      <div className="card-header" style={{ cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{event.event_name}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-            <span className="tag">{event.event_type}</span>
-            {event.event_date && <span style={{ marginLeft: 8 }}>{event.event_date}</span>}
-            <span style={{ marginLeft: 8 }}>{event.groups.length} groups</span>
+    <>
+      {events.map((ev, ei) => (
+        <div key={ei} className="search-event">
+          <div className="search-event-title">{ev.event_name}
+            <span className="text-muted" style={{ fontWeight: 400, fontSize: 11, marginLeft: 8 }}>
+              {ev.event_type} · {ev.group_count ?? ev.groups.length} groups
+            </span>
           </div>
-        </div>
-        <span style={{ color: 'var(--text-dim)' }}>{open ? '▲' : '▼'}</span>
-      </div>
 
-      {open && (
-        <div style={{ padding: '6px 0' }}>
-          {event.groups.map(g => (
-            <div key={g.group_id} style={{ padding: '6px 14px', borderBottom: '1px solid var(--border)22' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: g.markets?.length ? 6 : 0 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, flex: 1 }}>{g.title}</span>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{g.platform_count} platforms</span>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {g.platforms.map(p => <PlatformBadge key={p} platform={p} />)}
+          {ev.groups.map(g => (
+            <div key={g.group_id} className="search-group">
+              <div
+                className="search-group-header"
+                style={{ cursor: g.markets?.length ? 'pointer' : 'default' }}
+                onClick={() => g.markets?.length && toggle(g.group_id)}
+              >
+                <span className="search-group-title">{g.title}</span>
+                <span style={{ fontSize: 10, color: 'var(--dim)' }}>{g.platform_count} platforms</span>
+                <div className="pb-list">
+                  {g.platforms.map(p => <PlatformBadge key={p} p={p} />)}
                 </div>
+                {g.markets?.length ? (
+                  <span style={{ color: 'var(--dim)', fontSize: 11 }}>{open[g.group_id] ? '▲' : '▼'}</span>
+                ) : null}
               </div>
 
-              {g.markets && g.markets.length > 0 && (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ fontSize: 10, color: 'var(--text-dim)', padding: '3px 0', textAlign: 'left' }}>Platform</th>
-                      <th style={{ fontSize: 10, color: 'var(--text-dim)', padding: '3px 0', textAlign: 'right' }}>Bid</th>
-                      <th style={{ fontSize: 10, color: 'var(--text-dim)', padding: '3px 0', textAlign: 'right' }}>Ask</th>
-                      <th style={{ fontSize: 10, color: 'var(--text-dim)', padding: '3px 0', textAlign: 'right' }}>Last</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {g.markets.map(m => (
-                      <tr key={`${m.platform}-${m.market_id}`}>
-                        <td style={{ padding: '3px 0' }}><PlatformBadge platform={m.platform} /></td>
-                        <td style={{ textAlign: 'right', padding: '3px 0' }}><PriceCell value={m.yes_bid} /></td>
-                        <td style={{ textAlign: 'right', padding: '3px 0' }}>
-                          <span className="price-ask">{m.yes_ask != null ? `${m.yes_ask.toFixed(1)}¢` : '—'}</span>
-                        </td>
-                        <td style={{ textAlign: 'right', padding: '3px 0' }}><PriceCell value={m.last_price} /></td>
-                        <td style={{ textAlign: 'right', padding: '3px 0' }}>
-                          <a href={m.source_url} target="_blank" rel="noreferrer"
-                            style={{ color: 'var(--blue)', fontSize: 11, textDecoration: 'none' }}>↗</a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {open[g.group_id] && g.markets && (
+                <div className="group-markets">
+                  {g.markets.map(m => (
+                    <div key={`${m.platform}-${m.market_id}`} className="gm-row">
+                      <div className="gm-platform"><PlatformBadge p={m.platform} /></div>
+                      <span className="text-muted mono" style={{ fontSize: 10, flex: 1 }}>{m.market_id}</span>
+                      <span className="gm-price"><PriceYes v={m.last_price} /></span>
+                      <span className="gm-ask">{m.yes_bid != null ? `${m.yes_bid.toFixed(1)} / ${m.yes_ask?.toFixed(1)}` : '—'}</span>
+                      <a href={m.source_url} target="_blank" rel="noreferrer" className="gm-link">↗</a>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           ))}
         </div>
-      )}
-    </div>
+      ))}
+    </>
   )
 }
 
 export default function SearchPage() {
-  const [input, setInput] = useState('')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState('bitcoin')
+  const [limit, setLimit] = useState('5')
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['search', q],
-    queryFn: () => api.search(q, 10),
-    enabled: q.length > 0,
-  })
+  const [state, setState] = useState<RequestState>('idle')
+  const [data, setData]   = useState<SearchResponse | null>(null)
+  const [ms, setMs]       = useState<number>()
+  const [err, setErr]     = useState<string>()
+
+  const qs = new URLSearchParams({ q, limit })
+
+  async function run() {
+    setState('loading')
+    const t = Date.now()
+    try {
+      const d = await api.search(q, Number(limit))
+      setData(d); setMs(Date.now() - t); setState('ok')
+    } catch (e) { setErr(String(e)); setState('error') }
+  }
 
   return (
-    <>
-      <div className="page-header">
-        <div className="page-title">Search</div>
-        <span className="page-tag">GET /search</span>
-      </div>
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input className="search-input" style={{ flex: 1, padding: '8px 14px', fontSize: 13 }}
-          placeholder="輸入關鍵字（bitcoin、election、NBA…）"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && setQ(input)}
-        />
-        <button className="pill active" style={{ padding: '0 20px' }} onClick={() => setQ(input)}>搜尋</button>
-      </div>
-
-      {isLoading && <Spinner />}
-      {error && <ErrorBox message={String(error)} />}
-
-      {data && (
+    <ExplorerLayout
+      method="GET" path="/search"
+      desc="關鍵字搜尋，回傳 events → groups → markets 巢狀結構。同一 group 代表跨平台相同事件，可直接比較各平台價格。"
+      onRun={run}
+      responseState={state} responseData={data} responseMs={ms} responseError={err}
+      requestSlot={
         <>
-          <div className="section-title">{data.count} 筆結果 · 展開 group 可看各平台比價</div>
-          {data.events.map((ev, i) => <EventCard key={i} event={ev} />)}
-          {data.count === 0 && <div className="empty-state">找不到符合的市場</div>}
+          <div className="url-preview">
+            <span className="url-scheme">https://</span>
+            <span className="url-host">prediction.com</span>
+            <span className="url-path">/api/v2/search</span>
+            <span className="url-scheme">?</span>
+            <span className="url-qs">{qs.toString()}</span>
+          </div>
+          <div className="param-section">
+            <div className="param-section-label">Query Params</div>
+            <div className="param-row">
+              <div className="param-key-col">
+                <span className="param-key">q</span>
+                <span className="param-req">required</span>
+              </div>
+              <input className="param-input" value={q} onChange={e => setQ(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && run()}
+                placeholder="bitcoin · election · NBA…" />
+            </div>
+            <div className="param-row">
+              <div className="param-key-col"><span className="param-key">limit</span></div>
+              <input className="param-input" style={{ width: 70, flex: 'none' }} value={limit} onChange={e => setLimit(e.target.value)} />
+              <span style={{ fontSize: 10, color: 'var(--dim)', paddingTop: 5 }}>1–50</span>
+            </div>
+          </div>
+          <div className="header-section">
+            <div className="param-section-label">Headers</div>
+            <div className="header-row"><span className="header-k">X-API-Key</span><span className="header-v">pmx_***Xs0</span></div>
+          </div>
+        </>
+      }
+      visualSlot={data && (
+        <>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
+            找到 <strong style={{ color: 'var(--text)' }}>{data.count}</strong> 個 event · 展開 group 可看各平台 market 價格
+          </div>
+          <EventTree events={data.events} />
         </>
       )}
-
-      {!q && !isLoading && (
-        <div className="empty-state">輸入關鍵字開始搜尋跨平台市場</div>
-      )}
-    </>
+    />
   )
 }
