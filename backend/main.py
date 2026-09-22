@@ -6,6 +6,8 @@ import os
 import httpx
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,6 +24,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "http://localhost:5173",
+    "Access-Control-Allow-Methods": "GET",
+}
+
+# Global handler: ensure CORS headers survive uncaught exceptions
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers=CORS_HEADERS,
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=CORS_HEADERS,
+    )
+
 
 def prediction_headers() -> dict:
     if not API_KEY:
@@ -30,7 +54,7 @@ def prediction_headers() -> dict:
 
 
 async def proxy_get(path: str, params: dict | None = None) -> dict:
-    """Single shared httpx call with rate-limit headers forwarded."""
+    """Single shared httpx call with upstream error forwarding."""
     async with httpx.AsyncClient(timeout=20.0) as client:
         r = await client.get(
             f"{BASE_URL}{path}",
@@ -41,6 +65,13 @@ async def proxy_get(path: str, params: dict | None = None) -> dict:
         raise HTTPException(status_code=401, detail="Invalid API key")
     if r.status_code == 429:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    if r.status_code >= 400:
+        # forward upstream error body so the frontend can display it
+        try:
+            body = r.json()
+        except Exception:
+            body = {"detail": r.text}
+        raise HTTPException(status_code=r.status_code, detail=body)
     return r.json()
 
 
