@@ -25,6 +25,10 @@ export const api = {
   kalshiMarkets: (p: KalshiMarketsParams) => apiFetch<KalshiMarketsResponse>('/api/kalshi/markets', p as any),
   kalshiMarket:  (ticker: string) => apiFetch<KalshiMarket>(`/api/kalshi/markets/${encodeURIComponent(ticker)}`),
   trades:        (p: TradesParams) => apiFetch<TradesResponse>('/api/trades', p as any),
+  arb:           (limit?: number) => apiFetch<ArbResponse>('/api/arb', { limit }),
+  ev:            (limit?: number) => apiFetch<EvResponse>('/api/ev', { limit }),
+  smartMoney:    (p: AlertsParams) => apiFetch<AlertsResponse>('/api/alerts/smart-money', p as any),
+  fadeFinder:    (p: AlertsParams) => apiFetch<AlertsResponse>('/api/alerts/fade-finder', p as any),
 }
 
 // ── Types ───────────────────────────────────────────────────────────────────────
@@ -203,4 +207,83 @@ export interface TradesResponse {
   trades: Trade[]
   pagination: { limit: number; count: number; has_more: boolean; pagination_key: string | null }
   _meta: { data_available_from: string; start_time: number; end_time: number; default_window_applied?: boolean }
+}
+
+// ── Arb ─────────────────────────────────────────────────────────────────────────
+
+export interface ArbLeg {
+  platform: string
+  market_id: string
+  side: string
+  price: number
+  fee_usd: number
+  liquidity_usd: number
+  source_url: string
+}
+export interface ArbOpportunity {
+  group_id: number
+  group_title: string
+  event_type: string
+  event_date: string | null
+  detected_at: string
+  roi_pct: number
+  total_cost: number
+  max_wager_usd: number
+  legs: ArbLeg[]
+}
+export interface ArbResponse {
+  as_of: string
+  count: number
+  delay_seconds: number
+  opportunities: ArbOpportunity[]
+}
+
+// ── EV ──────────────────────────────────────────────────────────────────────────
+
+export interface EvLeg {
+  platform: string
+  market_id: string
+  side: string
+  price: number
+  roi_pct: number
+  ev_usd_per_dollar: number
+  source_url: string
+}
+export interface EvOpportunity {
+  group_id: number
+  group_title: string
+  event_date: string | null
+  detected_at: string
+  consensus_probability: number
+  legs: EvLeg[]
+}
+export interface EvResponse {
+  as_of: string
+  delay_seconds: number
+  opportunities: EvOpportunity[]
+}
+
+// ── Alerts ───────────────────────────────────────────────────────────────────────
+
+export interface AlertsParams {
+  alert_type?: string
+  limit?: number
+  platform?: string
+}
+export interface Alert {
+  id: number
+  alert_type: string
+  title: string
+  description: string
+  created_at: string
+  platform_buy: string
+  group_id: number
+  event_id?: number
+  market_slug?: string
+  event_url?: string
+  data: Record<string, unknown>
+}
+export interface AlertsResponse {
+  alerts: Alert[]
+  next_cursor?: string | null
 }

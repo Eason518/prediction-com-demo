@@ -11,7 +11,10 @@ import PricesBulkPage from './pages/PricesBulkPage'
 import KalshiMarketsPage from './pages/KalshiMarketsPage'
 import KalshiMarketPage  from './pages/KalshiMarketPage'
 import TradesPage        from './pages/TradesPage'
-import LockedPage     from './pages/LockedPage'
+import ArbPage           from './pages/ArbPage'
+import EvPage            from './pages/EvPage'
+import AlertsPage        from './pages/AlertsPage'
+import LiveFeedPage      from './pages/LiveFeedPage'
 
 // ── Sidebar nav definition ────────────────────────────────────────────────────
 const NAV = [
@@ -36,18 +39,16 @@ const NAV = [
   { group: 'Trades' },
   { to: '/trades', method: 'GET', label: '/trades' },
 
-  { group: 'WebSocket', lock: 'Dev+' },
-  { to: '/ws/prices',      method: 'WS', label: 'prices', lock: 'Dev+' },
-  { to: '/ws/smart-money', method: 'WS', label: 'smart_money', lock: 'Dev+' },
-  { to: '/ws/fade-finder', method: 'WS', label: 'fade_finder', lock: 'Dev+' },
+  { group: 'WebSocket' },
+  { to: '/live', method: 'WS', label: 'Live Feed (all channels)' },
 
-  { group: 'Alerts', lock: 'Dev+' },
-  { to: '/alerts/smart-money', method: 'GET', label: '/alerts/smart-money', lock: 'Dev+' },
-  { to: '/alerts/fade-finder', method: 'GET', label: '/alerts/fade-finder', lock: 'Dev+' },
+  { group: 'Alerts' },
+  { to: '/alerts/smart-money', method: 'GET', label: '/alerts/smart-money' },
+  { to: '/alerts/fade-finder', method: 'GET', label: '/alerts/fade-finder' },
 
-  { group: 'Signals', lock: 'Pro+' },
-  { to: '/signals/arb', method: 'GET', label: '/signals/arb', lock: 'Pro+' },
-  { to: '/signals/ev',  method: 'GET', label: '/signals/ev',  lock: 'Pro+' },
+  { group: 'Signals' },
+  { to: '/arb', method: 'GET', label: '/arb' },
+  { to: '/ev',  method: 'GET', label: '/ev' },
 ] as const
 
 // ── Topbar ────────────────────────────────────────────────────────────────────
@@ -121,19 +122,11 @@ function AppRoutes() {
       <Route path="/kalshi/markets"        element={<KalshiMarketsPage />} />
       <Route path="/kalshi/markets/ticker" element={<KalshiMarketPage />} />
       <Route path="/trades"                element={<TradesPage />} />
-
-      {/* WebSocket — locked */}
-      <Route path="/ws/prices"      element={<LockedPage method="WS" path="/prices"      desc="即時 bid/ask/last 更新，每次市場價格變動推送。"                 tier="Dev $49/mo" what="WebSocket prices channel — 即時報價串流" />} />
-      <Route path="/ws/smart-money" element={<LockedPage method="WS" path="/smart_money" desc="Polymarket 鯨魚大單 alert stream，追蹤聰明錢流向。"           tier="Dev $49/mo" what="WebSocket smart_money channel" />} />
-      <Route path="/ws/fade-finder" element={<LockedPage method="WS" path="/fade_finder" desc="反鯨信號 stream，大錢歷史上往錯誤方向移動的市場。"             tier="Dev $49/mo" what="WebSocket fade_finder channel" />} />
-
-      {/* Alerts — locked */}
-      <Route path="/alerts/smart-money" element={<LockedPage path="/alerts/smart-money" desc="大單鯨魚買賣信號 REST feed（smart_money / insider / captain_hook）。" tier="Dev $49/mo" what="GET /alerts/smart-money" />} />
-      <Route path="/alerts/fade-finder" element={<LockedPage path="/alerts/fade-finder" desc="Fade-the-whale 信號 REST feed。"                                    tier="Dev $49/mo" what="GET /alerts/fade-finder" />} />
-
-      {/* Signals — locked */}
-      <Route path="/signals/arb" element={<LockedPage path="/signals/arb" desc="跨平台套利機會，同一事件不同平台出現價差時觸發。" tier="Pro $249/mo" what="GET /signals/arb" />} />
-      <Route path="/signals/ev"  element={<LockedPage path="/signals/ev"  desc="+EV (Expected Value) 信號，針對訂閱的 match group。"  tier="Pro $249/mo" what="GET /signals/ev" />} />
+      <Route path="/live"                  element={<LiveFeedPage />} />
+      <Route path="/alerts/smart-money"    element={<AlertsPage endpoint="smart-money" />} />
+      <Route path="/alerts/fade-finder"    element={<AlertsPage endpoint="fade-finder" />} />
+      <Route path="/arb"                   element={<ArbPage />} />
+      <Route path="/ev"                    element={<EvPage />} />
     </Routes>
   )
 }

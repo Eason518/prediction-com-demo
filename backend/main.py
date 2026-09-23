@@ -3,11 +3,13 @@ Prediction.com Demo — FastAPI Backend
 All API calls to prediction.com are proxied here; the key never leaves the server.
 """
 import os
+import asyncio
 import httpx
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
+from websockets.asyncio.client import connect as websockets_connect
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -184,7 +186,95 @@ async def get_trades(
     })
 
 
+# ── Arb opportunities ──────────────────────────────────────────────────────────
+@app.get("/api/arb")
+async def get_arb(limit: int = Query(20, ge=1, le=100)):
+    return await proxy_get("/arb", {"limit": limit})
+
+
+# ── EV opportunities ───────────────────────────────────────────────────────────
+@app.get("/api/ev")
+async def get_ev(limit: int = Query(20, ge=1, le=100)):
+    return await proxy_get("/ev", {"limit": limit})
+
+
+# ── Smart money alerts ─────────────────────────────────────────────────────────
+@app.get("/api/alerts/smart-money")
+async def get_smart_money(
+    alert_type: str = "all",
+    limit: int = Query(20, ge=1, le=100),
+    platform: str | None = None,
+):
+    return await proxy_get("/alerts/smart-money", {
+        "alert_type": alert_type,
+        "limit": limit,
+        "platform": platform,
+    })
+
+
+# ── Fade finder alerts ─────────────────────────────────────────────────────────
+@app.get("/api/alerts/fade-finder")
+async def get_fade_finder(
+    limit: int = Query(20, ge=1, le=100),
+    platform: str | None = None,
+):
+    return await proxy_get("/alerts/fade-finder", {
+        "limit": limit,
+        "platform": platform,
+    })
+
+
 # ── Prices bulk ────────────────────────────────────────────────────────────────
 @app.get("/api/prices/bulk")
 async def get_prices_bulk(ids: str = Query(..., description="Comma-separated platform:market_id pairs")):
     return await proxy_get("/prices/bulk", {"ids": ids})
+
+
+# ── WebSocket proxy ────────────────────────────────────────────────────────────
+# Frontend connects here; backend relays to predictionhunt with the real API key
+WS_UPSTREAM = "wss://ws.predictionhunt.com"
+
+@app.websocket("/ws")
+async def websocket_proxy(client: WebSocket):
+    await client.accept()
+    if not API_KEY:
+        await client.send_json({"type": "error", "code": "NO_KEY", "message": "API key not configured"})
+        await client.close()
+        return
+    try:
+        async with websockets_connect(f"{WS_UPSTREAM}?api_key={API_KEY}") as upstream:
+            async def client_to_upstream():
+                while True:
+                    try:
+                        data = await client.receive_text()
+                        await upstream.send(data)
+                    except WebSocketDisconnect:
+                        break
+                    except Exception:
+                        break
+
+            async def upstream_to_client():
+                async for message in upstream:
+                    try:
+                        text = message if isinstance(message, str) else message.decode()
+                        await client.send_text(text)
+                    except Exception:
+                        break
+
+            tasks = [
+                asyncio.create_task(client_to_upstream()),
+                asyncio.create_task(upstream_to_client()),
+            ]
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for t in pending:
+                t.cancel()
+    except Exception as e:
+        try:
+            await client.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
+    finally:
+        try:
+            await client.close()
+        except Exception:
+            pass
